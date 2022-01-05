@@ -2,12 +2,18 @@
 #define THESIS_OPS_H
 
 #include "impl.h"
+#include <stdbool.h>
 
 void bulk_fill(const ArrayDesc *desc, void *data, const size_t *offset, const size_t *count, uint64_t val);
 
 void bulk_set(
         const ArrayDesc *desc, void *data, const size_t *offset, const size_t *count,
-        uint64_t (*action)(size_t dim, const size_t *index)
+        void *arg, uint64_t (*action)(const size_t *index, void *arg)
+);
+
+size_t *bulk_find(
+        const ArrayDesc *desc, void *data, const size_t *offset, const size_t *count,
+        void *arg, bool (*action)(const size_t *index, uint64_t val, void *arg)
 );
 
 void bulk_op(
@@ -24,9 +30,5 @@ void bulk_unary_op(
         const size_t *count,
         uint64_t (*action)(uint64_t x, uint64_t y, uint64_t *carry, uint64_t mask)
 );
-
-//void mul(const ArrayDesc *desc, const void *x, const void *y, void *z);
-//void div(const ArrayDesc *desc, const void *x, const void *y, void *z);
-//void mod(const ArrayDesc *desc, const void *x, const void *y, void *z);
 
 #endif

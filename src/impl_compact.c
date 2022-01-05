@@ -14,7 +14,7 @@ struct ARRAY_DESC {
 };
 
 #ifdef PAD_ROWS
-  #define pad_row(bits) ((bits + 7) & ~7)
+  #define pad_row(bits) ((bits + 63) & ~7)
 #else
   #define pad_row(bits) bits
 #endif
@@ -32,7 +32,7 @@ size_t byte_count(uint8_t num_bits, size_t dim, ...) {
     size *= va_arg(argp, size_t);
   va_end(argp);
 
-  return (num_bits * size + 7) >> 3;
+  return (num_bits * size + 63) >> 3;
 }
 
 ArrayDesc *alloc_desc(uint8_t num_bits, size_t dim, ...) {
@@ -64,9 +64,7 @@ ArrayDesc *alloc_desc(uint8_t num_bits, size_t dim, ...) {
 }
 
 void *alloc_array(ArrayDesc *desc) {
-  size_t bytes = (desc->num_bits * desc->size + 7) >> 3;
-  bytes = (bytes + 15) / 8 * 8; // Make sure it's padded to 8 bytes, and has an extra redundant 8 bytes
-  return malloc(bytes);
+  return malloc((desc->num_bits * desc->size + 63) >> 3); // Make sure it's padded to 8 bytes
 }
 
 uint64_t desc_mask(const ArrayDesc *desc) {
@@ -112,7 +110,7 @@ size_t dim_size(const ArrayDesc *desc, size_t dim) {
 }
 
 size_t byte_size(const ArrayDesc *desc) {
-  return (desc->num_bits * desc->size + 7) >> 3;
+  return (desc->num_bits * desc->size + 63) >> 3;
 }
 
 size_t get_index(const ArrayDesc *desc, ...) {
