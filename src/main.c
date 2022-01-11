@@ -1,14 +1,14 @@
 #include <stdio.h>
-#include <string.h>
-#include <sys/time.h>
-#include "impl.h"
-#include "ops.h"
-#include "ops_basic.h"
 #include "tests.h"
 
 // #define DEBUG
 
 #ifdef DEBUG
+  void print_vec(const ArrayDesc *desc, const void *v) {
+    for (size_t x = 0; x < dim_size(desc, 0); ++x)
+      printf("%i\t", array_get32(desc, v, x));
+    printf("\n");
+  }
   void print_mat(const ArrayDesc *desc, const void *m) {
     for (size_t x = 0; x < dim_size(desc, 0); ++x) {
       for (size_t y = 0; y < dim_size(desc, 1); ++y)
@@ -18,17 +18,8 @@
     printf("\n");
   }
 #else
-  #define print_mat(desc, m);
-#endif
-
-#ifdef DEBUG
-  void print_vec(const ArrayDesc *desc, const void *v) {
-    for (size_t x = 0; x < dim_size(desc, 0); ++x)
-      printf("%i\t", array_get32(desc, v, x));
-    printf("\n");
-  }
-#else
   #define print_vec(desc, m);
+  #define print_mat(desc, m);
 #endif
 
 /*#define MAT_SIZE 512
@@ -148,12 +139,12 @@ void test_bool() {
 }*/
 
 int main() {
-  struct timeval time;
-
-  gettimeofday(&time, NULL);
-
-  test_bool();
-  // test_mat();
+  test_vec();
+  printf("\n");
+  test_mat();
+  printf("\n");
+  test_tsr();
+  printf("\n");
 
   return 0;
 }

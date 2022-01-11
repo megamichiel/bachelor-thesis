@@ -12,7 +12,7 @@ include_directories(src)
 include_directories(src/tests)
 
 #add_executable(Thesis_normal src/types.c src/impl_normal.c src/main.c)
-add_executable(Thesis_compact src/types.c src/ops_seq.c src/ops_bulk.c src/ops_basic.c src/tests/tests.c src/main.c)
+add_executable(Thesis_compact src/types.c src/ops_seq.c src/ops_bulk.c src/ops_basic.c src/tests/tests.c src/tests/tests_vec.c src/tests/tests_mat.c src/tests/tests_tsr.c src/main.c)
 
 #target_compile_definitions(Thesis_normal PUBLIC IMPL__NORMAL)
 target_compile_definitions(Thesis_compact PUBLIC IMPL__COMPACT)
