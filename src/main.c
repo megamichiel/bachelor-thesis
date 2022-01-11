@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
-#include <stdbool.h>
+#include <sys/time.h>
 #include "impl.h"
 #include "ops.h"
 #include "ops_basic.h"
+#include "tests.h"
 
 // #define DEBUG
 
@@ -31,27 +31,7 @@
   #define print_vec(desc, m);
 #endif
 
-void perform_benchmark(const char *name, int warmup, int iterations, void (*func)(void **), void **args) {
-  // First, warp up
-  printf("Starting benchmark %s (%i warmups, %i iterations)\n", name, warmup, iterations);
-
-  while (--warmup >= 0)
-    func(args);
-
-  float start = (float) clock() / CLOCKS_PER_SEC;
-
-  // Then perform the tasks
-  while (--iterations >= 0)
-    func(args);
-
-  float time = (float) clock() / CLOCKS_PER_SEC - start;
-
-  printf("Benchmark %s done, time taken: %fs\n", name, time);
-}
-
-#define MAT_WARMUPS 10000
-#define MAT_TEST_COUNT 100000
-#define MAT_SIZE 512
+/*#define MAT_SIZE 512
 #define MAT_SUB_SIZE 400
 // #define MAT_SIZE 8
 // #define MAT_SUB_SIZE 5
@@ -61,9 +41,9 @@ void test_mat_normal(void **args) {
 
   memset(z, 0, MAT_SIZE * MAT_SIZE);
 
-  /*for (int py = 0; py < MAT_SUB_SIZE; ++py)
+  for (int py = 0; py < MAT_SUB_SIZE; ++py)
     for (int px = 0; px < MAT_SUB_SIZE; ++px)
-      z[py * MAT_SIZE + px] = 2;*/
+      z[py * MAT_SIZE + px] = 2;
 
   for (int py = 0; py < MAT_SUB_SIZE; ++py)
     for (int px = 0; px < MAT_SUB_SIZE; ++px)
@@ -94,11 +74,11 @@ void test_mat() {
   print_mat(desc, x);
   print_mat(desc, y);
 
-  perform_benchmark("mat_normal", MAT_WARMUPS, MAT_TEST_COUNT, test_mat_normal, args);
+  perform_benchmark("mat_normal", WARMUP_COUNT, BENCH_COUNT, test_mat_normal, args);
 
   print_mat(desc, z);
 
-  perform_benchmark("mat_compact", MAT_WARMUPS, MAT_TEST_COUNT, test_mat_compact, args);
+  perform_benchmark("mat_compact", WARMUP_COUNT, BENCH_COUNT, test_mat_compact, args);
 
   print_mat(desc, z);
 }
@@ -165,9 +145,13 @@ void test_bool_normal() {
 void test_bool() {
   test_bool_normal();
   test_bool_compact();
-}
+}*/
 
 int main() {
+  struct timeval time;
+
+  gettimeofday(&time, NULL);
+
   test_bool();
   // test_mat();
 

@@ -64,7 +64,7 @@ ArrayDesc *alloc_desc(uint8_t num_bits, size_t dim, ...) {
 }
 
 void *alloc_array(ArrayDesc *desc) {
-  return malloc((desc->num_bits * desc->size + 63) >> 3); // Make sure it's padded to 8 bytes
+  return malloc((desc->num_bits * desc->size + 63) >> 6 << 3); // Make sure it's padded to 8 bytes
 }
 
 uint64_t desc_mask(const ArrayDesc *desc) {
@@ -110,7 +110,7 @@ size_t dim_size(const ArrayDesc *desc, size_t dim) {
 }
 
 size_t byte_size(const ArrayDesc *desc) {
-  return (desc->num_bits * desc->size + 63) >> 3;
+  return (desc->num_bits * desc->size + 63) >> 6 << 3;
 }
 
 size_t get_index(const ArrayDesc *desc, ...) {

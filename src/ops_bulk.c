@@ -212,7 +212,7 @@ void bulk_op(
 
   uint64_t vx, vy, vz, carry, nx, ny;
 
-  uint64_t imask, nmask;
+  uint64_t imask;
   uint8_t hi;
   gen_mask(bits, dz->mask, &imask, &hi);
 
@@ -243,8 +243,7 @@ void bulk_op(
       if ((iy += 64 - iz) >= 64 && (iy -= 64))
         vy |= ny << (64 - iy);
 
-      nmask = next_mask(bits, hi, &val_offset, imask);
-      vz = action(vx << iz, vy << iz, &carry, nmask);
+      vz = action(vx << iz, vy << iz, &carry, next_mask(bits, hi, &val_offset, imask));
 
       *data_z = *data_z & ~(UINT64_MAX << iz) | (vz & (UINT64_MAX << iz));
 
@@ -258,8 +257,7 @@ void bulk_op(
       if (ix) vx |= nx << (64 - ix);
       if (iy) vy |= ny << (64 - iy);
 
-      nmask = next_mask(bits, hi, &val_offset, imask);
-      *(data_z++) = action(vx, vy, &carry, nmask);
+      *(data_z++) = action(vx, vy, &carry, next_mask(bits, hi, &val_offset, imask));
     }
 
     if (rem_bits) {
@@ -269,8 +267,7 @@ void bulk_op(
       if (ix + rem_bits >= 64) vx |= nx << (64 - ix);
       if (iy + rem_bits >= 64) vy |= ny << (64 - iy);
 
-      nmask = next_mask(bits, hi, &val_offset, imask);
-      vz = action(vx, vy, &carry, nmask);
+      vz = action(vx, vy, &carry, next_mask(bits, hi, &val_offset, imask));
 
       *data_z = *data_z & ~(~(UINT64_MAX << rem_bits) << iz) | (vz & ~(UINT64_MAX << rem_bits)) << iz;
     }
