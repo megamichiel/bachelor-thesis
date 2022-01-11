@@ -82,7 +82,7 @@ void test_vec_set_c(void **args) {
   size_t count = *((size_t *) args[2]);
 
   memset(data, 0, count);
-  bulk_set(desc, data, NULL, NULL, NULL, test_vec_set_c_action);
+  bulk_set(desc, data, NULL, NULL, test_vec_set_c_action, NULL);
 }
 
 void test_vec_set() {
@@ -119,7 +119,7 @@ void test_vec_and_c(void **args) {
 
   memset(z, 0, count);
 
-  bulk_op(desc, x, NULL, desc, y, NULL, desc, z, NULL, NULL, bulk_and);
+  bulk_op(desc, x, NULL, desc, y, NULL, desc, z, NULL, NULL, bulk_and, NULL);
 }
 
 void test_vec_and() {

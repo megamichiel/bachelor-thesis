@@ -59,20 +59,25 @@ void bulk_fill(const ArrayDesc *desc, void *data, const size_t *offset, const si
   } while (cur_dim != SIZE_MAX);
 }
 
-inline uint64_t gen_values(size_t dim, uint8_t bits_per_val, uint64_t mask, int *bit, size_t *index, uint8_t bits, void *arg, uint64_t (*action)(const size_t *, void *)) {
+inline uint64_t gen_values(size_t dim, uint8_t bits_per_val, uint64_t mask, int *bit, size_t *index, uint8_t highest_bit, void *arg, uint64_t (*action)(const size_t *, void *)) {
   uint64_t v = 0;
-  for (; *bit < bits; *bit += bits_per_val) {
+  if (*bit < 0) {
+    v |= (action(index, arg) & mask) >> -(*bit);
+    ++index[dim - 1];
+    *bit += bits_per_val;
+  }
+  for (; *bit < highest_bit; *bit += bits_per_val) {
     v |= (action(index, arg) & mask) << *bit;
     ++index[dim - 1];
   }
-  if ((*bit -= bits) > 0) {
+  if ((*bit -= highest_bit) > 0) {
     *bit -= bits_per_val;
     --index[dim - 1];
   }
   return v;
 }
 
-void bulk_set(const ArrayDesc *desc, void *data, const size_t *offset, const size_t *count, void *arg, uint64_t (*action)(const size_t *, void *)) {
+void bulk_set(const ArrayDesc *desc, void *data, const size_t *offset, const size_t *count, uint64_t (*action)(const size_t *, void *), void *arg) {
   if (count == NULL)
     count = desc->sizes;
 
@@ -105,11 +110,12 @@ void bulk_set(const ArrayDesc *desc, void *data, const size_t *offset, const siz
     }
 
     // Set each index
-    for (; rem_bits >= 64; rem_bits -= 64) // assert(bz == 0)
+    for (; rem_bits >= 64; rem_bits -= 64)// assert(bz == 0)
       *(row_data++) = gen_values(dim, bits, mask, &val_offset, rel_offset, 64, arg, action);
 
     // Set the last index
     vz = gen_values(dim, bits, mask, &val_offset, rel_offset, iz + rem_bits, arg, action);
+
     *row_data = *row_data & ~(~(UINT64_MAX << rem_bits) << iz) | vz & ~(UINT64_MAX << rem_bits) << iz;
 
     for (cur_dim = dim - 2; cur_dim != SIZE_MAX && ++rel_offset[cur_dim] == count[cur_dim]; --cur_dim)
@@ -122,7 +128,7 @@ inline bool get_values(size_t dim, uint8_t bits_per_val, int *bit, size_t *index
   uint64_t v = *data;
 
   for (; *bit < highest_bit; *bit += bits_per_val) {
-    // TODO handle situation where number is spread across multiple bytes
+    // Is the number spread across multiple bytes?
     if (*bit + bits_per_val > highest_bit) {
       if (action(index, v >> *bit | *(data + 1) << (highest_bit - *bit) & ~(UINT64_MAX << bits_per_val), arg))
         return true;
@@ -139,7 +145,7 @@ inline bool get_values(size_t dim, uint8_t bits_per_val, int *bit, size_t *index
 // TODO
 size_t *bulk_find(
         const ArrayDesc *desc, void *data, const size_t *offset, const size_t *count,
-        void *arg, bool (*action)(const size_t *, uint64_t, void *)
+        bool (*action)(const size_t *, uint64_t, void *), void *arg
 ) {
   uint64_t *data64 = data;
   if (count == NULL)
@@ -193,7 +199,7 @@ void bulk_op(
         const ArrayDesc *dy, const void *y, const size_t *oy,
         const ArrayDesc *dz, void *z, const size_t *oz,
         const size_t *count,
-        uint64_t (*action)(uint64_t, uint64_t, uint64_t *, uint64_t)
+        uint64_t (*action)(uint64_t, uint64_t, uint64_t *, uint64_t, void *), void *arg
 ) {
   if (count == NULL)
     count = dz->sizes;
@@ -243,7 +249,7 @@ void bulk_op(
       if ((iy += 64 - iz) >= 64 && (iy -= 64))
         vy |= ny << (64 - iy);
 
-      vz = action(vx << iz, vy << iz, &carry, next_mask(bits, hi, &val_offset, imask));
+      vz = action(vx << iz, vy << iz, &carry, next_mask(bits, hi, &val_offset, imask), arg);
 
       *data_z = *data_z & ~(UINT64_MAX << iz) | (vz & (UINT64_MAX << iz));
 
@@ -257,7 +263,7 @@ void bulk_op(
       if (ix) vx |= nx << (64 - ix);
       if (iy) vy |= ny << (64 - iy);
 
-      *(data_z++) = action(vx, vy, &carry, next_mask(bits, hi, &val_offset, imask));
+      *(data_z++) = action(vx, vy, &carry, next_mask(bits, hi, &val_offset, imask), arg);
     }
 
     if (rem_bits) {
@@ -267,7 +273,7 @@ void bulk_op(
       if (ix + rem_bits >= 64) vx |= nx << (64 - ix);
       if (iy + rem_bits >= 64) vy |= ny << (64 - iy);
 
-      vz = action(vx, vy, &carry, next_mask(bits, hi, &val_offset, imask));
+      vz = action(vx, vy, &carry, next_mask(bits, hi, &val_offset, imask), arg);
 
       *data_z = *data_z & ~(~(UINT64_MAX << rem_bits) << iz) | (vz & ~(UINT64_MAX << rem_bits)) << iz;
     }
@@ -281,7 +287,7 @@ void bulk_unary_op(
         const ArrayDesc *dx, const void *x, const size_t *ox,
         const ArrayDesc *dy, void *y, const size_t *oy,
         const size_t *count,
-        uint64_t (*action)(uint64_t, uint64_t, uint64_t*, uint64_t)
+        uint64_t (*action)(uint64_t, uint64_t, uint64_t*, uint64_t, void*), void *arg
 ) {
-  bulk_op(dx, x, ox, dx, x, ox, dy, y, oy, count, action);
+  bulk_op(dx, x, ox, dx, x, ox, dy, y, oy, count, action, arg);
 }

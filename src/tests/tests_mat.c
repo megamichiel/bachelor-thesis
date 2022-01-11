@@ -84,7 +84,7 @@ void test_mat_set_c(void **args) {
   size_t count = *((size_t *) args[2]);
 
   memset(data, 0, count);
-  bulk_set(desc, data, NULL, NULL, &count, test_mat_set_c_action);
+  bulk_set(desc, data, NULL, NULL, test_mat_set_c_action, &count);
 }
 
 void test_mat_set() {
@@ -122,7 +122,7 @@ void test_mat_and_c(void **args) {
 
   memset(z, 0, count);
 
-  bulk_op(desc, x, NULL, desc, y, NULL, desc, z, NULL, NULL, bulk_and);
+  bulk_op(desc, x, NULL, desc, y, NULL, desc, z, NULL, NULL, bulk_and, NULL);
 }
 
 void test_mat_and() {

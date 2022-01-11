@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include "tests.h"
+#include "ops.h"
+#include "ops_basic.h"
 
 // #define DEBUG
 
@@ -138,13 +140,45 @@ void test_bool() {
   test_bool_compact();
 }*/
 
+uint64_t init_data(const size_t *index, void *arg) {
+  return *index;
+}
+
+bool count_odd(const size_t *index, uint64_t value, void *arg) {
+  if (value & 1)
+    *((uint64_t *) arg) += 1;
+  return false;
+}
+
+bool count_sum(const size_t *index, uint64_t value, void *arg) {
+  *((uint64_t *) arg) += value;
+  return false;
+}
+
 int main() {
-  test_vec();
-  printf("\n");
-  test_mat();
-  printf("\n");
-  test_tsr();
-  printf("\n");
+  ArrayDesc *desc = alloc_desc(7, 1, 64);
+  void *data = alloc_array(desc);
+
+  bulk_set(desc, data, NULL, NULL, init_data, NULL);
+
+  uint64_t find_value = 42;
+  size_t *index = bulk_find(desc, data, NULL, NULL, bulk_find_value, &find_value);
+  printf("Found index: %zu\n", index[0]);
+
+  uint64_t num_odd = 0;
+  bulk_find(desc, data, NULL, NULL, count_odd, &num_odd);
+  printf("Number of odd elements: %zu\n", num_odd);
+
+  uint64_t sum = 0;
+  bulk_find(desc, data, NULL, NULL, count_sum, &sum);
+  printf("Sum of list: %zu\n", sum);
+
+  // test_vec();
+  // printf("\n");
+  // test_mat();
+  // printf("\n");
+  // test_tsr();
+  // printf("\n");
 
   return 0;
 }
