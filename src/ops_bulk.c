@@ -59,20 +59,21 @@ void bulk_fill(const ArrayDesc *desc, void *data, const size_t *offset, const si
   } while (cur_dim != SIZE_MAX);
 }
 
-inline uint64_t gen_values(size_t dim, uint8_t bits_per_val, uint64_t mask, int *bit, size_t *index, uint8_t highest_bit, void *arg, uint64_t (*action)(const size_t *, void *)) {
+inline uint64_t gen_values(size_t *index, size_t dim, uint8_t bits_per_val, uint64_t mask, int *bit,
+                           uint8_t highest_bit, uint64_t (*action)(const size_t *, void *), void *arg) {
   uint64_t v = 0;
   if (*bit < 0) {
     v |= (action(index, arg) & mask) >> -(*bit);
-    ++index[dim - 1];
+    ++index[dim];
     *bit += bits_per_val;
   }
   for (; *bit < highest_bit; *bit += bits_per_val) {
     v |= (action(index, arg) & mask) << *bit;
-    ++index[dim - 1];
+    ++index[dim];
   }
   if ((*bit -= highest_bit) > 0) {
     *bit -= bits_per_val;
-    --index[dim - 1];
+    --index[dim];
   }
   return v;
 }
@@ -83,10 +84,11 @@ void bulk_set(const ArrayDesc *desc, void *data, const size_t *offset, const siz
 
   uint8_t bits = desc->num_bits;
   uint64_t mask = desc->mask;
-  size_t dim = desc->dim, row_bits = count[dim - 1] * bits, rem_bits;
+  size_t hi_dim = desc->dim - 1,
+       row_bits = count[hi_dim] * bits, rem_bits;
 
   size_t *rel_offset = desc->bulk_op_offset;
-  memset(rel_offset, 0, dim * sizeof(size_t));
+  memset(rel_offset, 0, (hi_dim + 1) * sizeof(size_t));
 
   size_t iz;
   uint64_t *row_data, vz;
@@ -96,7 +98,7 @@ void bulk_set(const ArrayDesc *desc, void *data, const size_t *offset, const siz
 
   // Update row by row
   do {
-    rel_offset[dim - 1] = 0;
+    rel_offset[hi_dim] = 0;
     iz = bit_index_offset(desc, rel_offset, offset);
     row_data = (uint64_t *) data + (iz >> 6);
     iz &= 63, val_offset = (int) iz;
@@ -104,50 +106,28 @@ void bulk_set(const ArrayDesc *desc, void *data, const size_t *offset, const siz
 
     // Align to full array indices
     if (iz && iz + rem_bits >= 64) {
-      vz = gen_values(dim, bits, mask, &val_offset, rel_offset, 64, arg, action);
+      vz = gen_values(rel_offset, hi_dim, bits, mask, &val_offset, 64, action, arg);
       *row_data = *row_data & ~(UINT64_MAX << iz) | vz & UINT64_MAX << iz;
       rem_bits -= 64 - iz, ++row_data, iz = 0;
     }
 
     // Set each index
-    for (; rem_bits >= 64; rem_bits -= 64)// assert(bz == 0)
-      *(row_data++) = gen_values(dim, bits, mask, &val_offset, rel_offset, 64, arg, action);
+    for (; rem_bits >= 64; rem_bits -= 64) // assert(bz == 0)
+      *(row_data++) = gen_values(rel_offset, hi_dim, bits, mask, &val_offset, 64, action, arg);
 
     // Set the last index
-    vz = gen_values(dim, bits, mask, &val_offset, rel_offset, iz + rem_bits, arg, action);
-
+    vz = gen_values(rel_offset, hi_dim, bits, mask, &val_offset, iz + rem_bits, action, arg);
     *row_data = *row_data & ~(~(UINT64_MAX << rem_bits) << iz) | vz & ~(UINT64_MAX << rem_bits) << iz;
 
-    for (cur_dim = dim - 2; cur_dim != SIZE_MAX && ++rel_offset[cur_dim] == count[cur_dim]; --cur_dim)
+    for (cur_dim = hi_dim - 1; cur_dim != SIZE_MAX && ++rel_offset[cur_dim] == count[cur_dim]; --cur_dim)
       rel_offset[cur_dim] = 0;
   } while (cur_dim != SIZE_MAX);
 }
 
-inline bool get_values(size_t dim, uint8_t bits_per_val, int *bit, size_t *index, uint8_t highest_bit,
-                              const uint64_t *data, void *arg, bool (*action)(const size_t *, uint64_t, void *)) {
-  uint64_t v = *data;
-
-  for (; *bit < highest_bit; *bit += bits_per_val) {
-    // Is the number spread across multiple bytes?
-    if (*bit + bits_per_val > highest_bit) {
-      if (action(index, v >> *bit | *(data + 1) << (highest_bit - *bit) & ~(UINT64_MAX << bits_per_val), arg))
-        return true;
-    } else if (action(index, v >> *bit & ~(UINT64_MAX << bits_per_val), arg)) {
-      return true;
-    }
-
-    ++index[dim - 1];
-  }
-  *bit -= highest_bit;
-  return false;
-}
-
-// TODO
 size_t *bulk_find(
         const ArrayDesc *desc, void *data, const size_t *offset, const size_t *count,
         bool (*action)(const size_t *, uint64_t, void *), void *arg
 ) {
-  uint64_t *data64 = data;
   if (count == NULL)
     count = desc->sizes;
 
@@ -157,8 +137,8 @@ size_t *bulk_find(
   size_t *rel_offset = desc->bulk_op_offset;
   memset(rel_offset, 0, dim * sizeof(size_t));
 
+  uint64_t *data64, vz;
   size_t iz;
-  uint8_t bz;
   int val_offset;
 
   size_t cur_dim;
@@ -166,27 +146,29 @@ size_t *bulk_find(
   // Update row by row
   do {
     rel_offset[dim - 1] = 0;
-    iz = bit_index_offset(desc, rel_offset, offset), bz = iz & 63, iz >>= 6, val_offset = bz;
+    iz = bit_index_offset(desc, rel_offset, offset);
+    data64 = (uint64_t *) data + (iz >> 6);
+    val_offset = (int) (iz &= 63);
     rem_bits = row_bits;
 
-    // Align to full array indices
-    if (bz && bz + rem_bits >= 64) {
-      if (get_values(dim, bits, &val_offset, rel_offset, 64, data64 + (iz++), arg, action))
-        return rel_offset;
-      // data64[iz] = data64[iz] & ~(UINT64_MAX << bz) | vz & UINT64_MAX << bz;
-      rem_bits -= 64 - bz, bz = 0;
+    while (rem_bits > 0) {
+      uint8_t highest_bit = iz + rem_bits < 64 ? iz + rem_bits : 64;
+
+      for (vz = *(data64++); val_offset < highest_bit; val_offset += bits) {
+        // Is the number spread across multiple bytes?
+        if (val_offset + bits > 64) {
+          if (action(rel_offset, vz >> val_offset | *data64 << (highest_bit - val_offset) & ~(UINT64_MAX << bits), arg))
+            return rel_offset;
+        } else if (action(rel_offset, vz >> val_offset & ~(UINT64_MAX << bits), arg))
+          return rel_offset;
+
+        ++rel_offset[dim - 1];
+      }
+      val_offset -= highest_bit;
+
+      rem_bits -= highest_bit - iz;
+      iz = 0;
     }
-
-    // Get each index
-    for (; rem_bits >= 64; rem_bits -= 64) // assert(bz == 0)
-      // data64[iz++] = get_values(dim, bits, &val_offset, rel_offset, 64, arg, action);
-      if (get_values(dim, bits, &val_offset, rel_offset, 64, data64 + (iz++), arg, action))
-        return rel_offset;
-
-    // Get the last index
-    if (get_values(dim, bits, &val_offset, rel_offset, bz + rem_bits, data64 + iz, arg, action))
-      return rel_offset;
-    // data64[iz] = data64[iz] & ~(~(UINT64_MAX << rem_bits) << bz) | vz & ~(UINT64_MAX << rem_bits) << bz;
 
     for (cur_dim = dim - 2; cur_dim != SIZE_MAX && ++rel_offset[cur_dim] == count[cur_dim]; --cur_dim)
       rel_offset[cur_dim] = 0;

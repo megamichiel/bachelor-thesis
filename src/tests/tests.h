@@ -23,6 +23,8 @@
 #define ACTIVE_TEST_BITS BOOL_BITS
 #define ACTIVE_TEST_TYPE bool
 #define ACTIVE_TEST_TYPE_MAX 1
+#define ACTIVE_TEST_GET array_get8
+#define ACTIVE_TEST_SET array_set8
 
 // TODO investigate why test_vec_set_n is much faster on this test than bool (around 4 times faster than bool, although I would expect identical performance)
 // I imagine that I made a mistake somewhere in the code, but I couldn't find it as of yet
