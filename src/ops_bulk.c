@@ -173,6 +173,8 @@ size_t *bulk_find(
     for (cur_dim = dim - 2; cur_dim != SIZE_MAX && ++rel_offset[cur_dim] == count[cur_dim]; --cur_dim)
       rel_offset[cur_dim] = 0;
   } while (cur_dim != SIZE_MAX);
+
+  return NULL;
 }
 
 // Assumes little-endian

@@ -29,8 +29,7 @@ uint64_t init_data(const size_t *index, void *arg) {
 }
 
 bool count_odd(const size_t *index, uint64_t value, void *arg) {
-  if (value & 1)
-    *((uint64_t *) arg) += 1;
+  *((uint64_t *) arg) += value & 1;
   return false;
 }
 

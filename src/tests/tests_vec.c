@@ -85,8 +85,8 @@ void test_vec_set() {
   ACTIVE_TEST_TYPE *data_n = malloc(VEC_SIZE * sizeof(ACTIVE_TEST_TYPE));
   size_t count_n = VEC_SIZE;
 
-  for (size_t i = 0; i < count_n; ++i)
-    data_n[i] = i;
+  for (size_t x = 0; x < count_n; ++x)
+    data_n[x] = x;
 
   void *args_n[] = { data_n };
 
@@ -109,8 +109,8 @@ void test_vec_fill_n(void **args) {
   memset(data, 0, count * sizeof(ACTIVE_TEST_TYPE));
 
   // memset(data, 1, count * sizeof(ACTIVE_TEST_TYPE));
-  for (int i = 0; i < count; ++i)
-    data[i] = 1;
+  for (int x = 0; x < count; ++x)
+    data[x] = 1;
 }
 
 void test_vec_fill_c(void **args) {
@@ -145,8 +145,8 @@ void test_vec_bulk_set_n(void **args) {
 
   memset(data, 0, count * sizeof(ACTIVE_TEST_TYPE));
 
-  for (int i = 0; i < count; ++i)
-    data[i] = i & ACTIVE_TEST_TYPE_MAX;
+  for (int x = 0; x < count; ++x)
+    data[x] = x & ACTIVE_TEST_TYPE_MAX;
 }
 
 uint64_t test_vec_bulk_set_c_action(const size_t *index, __attribute__((unused)) void *arg) {
@@ -185,8 +185,8 @@ void test_vec_and_n(void **args) {
 
   memset(z, 0, count);
 
-  for (int i = 0; i < count; ++i)
-    z[i] = x[i] & y[i];
+  for (int ix = 0; ix < count; ++ix)
+    z[ix] = x[ix] & y[ix];
 }
 
 void test_vec_and_c(void **args) {
@@ -207,9 +207,9 @@ void test_vec_and() {
 
   srandom(RAND_SEED);
 
-  for (int i = 0; i < count_n; ++i) {
-    x_n[i] = random() & ACTIVE_TEST_TYPE_MAX;
-    y_n[i] = random() & ACTIVE_TEST_TYPE_MAX;
+  for (int x = 0; x < count_n; ++x) {
+    x_n[x] = random() & ACTIVE_TEST_TYPE_MAX;
+    y_n[x] = random() & ACTIVE_TEST_TYPE_MAX;
   }
 
   void *args_n[] = { x_n, y_n, z_n, &count_n };
@@ -226,9 +226,9 @@ void test_vec_and() {
 
   srandom(RAND_SEED);
 
-  for (int i = 0; i < count_n; ++i) {
-    array_set8(desc, x_c, i, random() & ACTIVE_TEST_TYPE_MAX);
-    array_set8(desc, y_c, i, random() & ACTIVE_TEST_TYPE_MAX);
+  for (int x = 0; x < count_n; ++x) {
+    array_set8(desc, x_c, x, random() & ACTIVE_TEST_TYPE_MAX);
+    array_set8(desc, y_c, x, random() & ACTIVE_TEST_TYPE_MAX);
   }
 
   void *args_c[] = { desc, x_c, y_c, z_c, &count_c };
