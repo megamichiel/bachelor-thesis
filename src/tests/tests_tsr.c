@@ -15,7 +15,7 @@ void test_tsr_init_c() {
   ArrayDesc *desc = alloc_desc(ACTIVE_TEST_BITS, 3, TSR_SIZE, TSR_SIZE, TSR_SIZE);
   void *data = alloc_array(desc);
 
-  free(desc);
+  free_desc(desc);
   free(data);
 }
 
@@ -66,6 +66,10 @@ void test_tsr_get() {
   void *args_c[] = { desc, data_c };
 
   perform_benchmark("test_tsr_get_c", WARMUP_COUNT, BENCH_COUNT, test_tsr_get_c, args_c);
+
+  free(data_n);
+  free_desc(desc);
+  free(data_c);
 }
 
 void test_tsr_set_n(void **args) {
@@ -108,6 +112,10 @@ void test_tsr_set() {
   void *args_c[] = { desc, data_c };
 
   perform_benchmark("test_tsr_set_c", WARMUP_COUNT, BENCH_COUNT, test_tsr_set_c, args_c);
+
+  free(data_n);
+  free_desc(desc);
+  free(data_c);
 }
 
 void test_tsr_fill_n(void **args) {
@@ -148,6 +156,10 @@ void test_tsr_fill() {
   void *args_c[] = { desc, data_c, &count_c };
 
   perform_benchmark("test_tsr_fill_c", WARMUP_COUNT, BENCH_COUNT, test_tsr_fill_c, args_c);
+
+  free(data_n);
+  free_desc(desc);
+  free(data_c);
 }
 
 void test_tsr_bulk_set_n(void **args) {
@@ -190,6 +202,10 @@ void test_tsr_bulk_set() {
   void *args_c[] = { desc, data_c, &count_c };
 
   perform_benchmark("test_tsr_bulk_set_c", WARMUP_COUNT, BENCH_COUNT, test_tsr_bulk_set_c, args_c);
+
+  free(data_n);
+  free_desc(desc);
+  free(data_c);
 }
 
 void test_tsr_and_n(void **args) {
@@ -258,6 +274,11 @@ void test_tsr_and() {
   void *args_c[] = { desc, x_c, y_c, z_c, &count_c };
 
   perform_benchmark("test_tsr_and_c", WARMUP_COUNT, BENCH_COUNT, test_tsr_and_c, args_c);
+
+  free_desc(desc);
+  free(x_c);
+  free(y_c);
+  free(z_c);
 }
 
 void test_tsr() {

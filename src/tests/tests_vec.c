@@ -15,7 +15,7 @@ void test_vec_init_c() {
   ArrayDesc *desc = alloc_desc(ACTIVE_TEST_BITS, 1, VEC_SIZE);
   void *data = alloc_array(desc);
 
-  free(desc);
+  free_desc(desc);
   free(data);
 }
 
@@ -62,6 +62,10 @@ void test_vec_get() {
   void *args_c[] = { desc, data_c };
 
   perform_benchmark("test_vec_get_c", WARMUP_COUNT, BENCH_COUNT, test_vec_get_c, args_c);
+
+  free(data_n);
+  free_desc(desc);
+  free(data_c);
 }
 
 void test_vec_set_n(void **args) {
@@ -100,6 +104,10 @@ void test_vec_set() {
   void *args_c[] = { desc, data_c };
 
   perform_benchmark("test_vec_set_c", WARMUP_COUNT, BENCH_COUNT, test_vec_set_c, args_c);
+
+  free(data_n);
+  free_desc(desc);
+  free(data_c);
 }
 
 void test_vec_fill_n(void **args) {
@@ -137,6 +145,10 @@ void test_vec_fill() {
   void *args_c[] = { desc, data_c, &count_c };
 
   perform_benchmark("test_vec_fill_c", WARMUP_COUNT, BENCH_COUNT, test_vec_fill_c, args_c);
+
+  free(data_n);
+  free_desc(desc);
+  free(data_c);
 }
 
 void test_vec_bulk_set_n(void **args) {
@@ -177,6 +189,10 @@ void test_vec_bulk_set() {
   void *args_c[] = { desc, data_c, &count_c };
 
   perform_benchmark("test_vec_bulk_set_c", WARMUP_COUNT, BENCH_COUNT, test_vec_bulk_set_c, args_c);
+
+  free(data_n);
+  free_desc(desc);
+  free(data_c);
 }
 
 void test_vec_and_n(void **args) {
@@ -234,6 +250,11 @@ void test_vec_and() {
   void *args_c[] = { desc, x_c, y_c, z_c, &count_c };
 
   perform_benchmark("test_vec_and_c", WARMUP_COUNT, BENCH_COUNT, test_vec_and_c, args_c);
+
+  free_desc(desc);
+  free(x_c);
+  free(y_c);
+  free(z_c);
 }
 
 void test_vec() {

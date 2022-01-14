@@ -3,7 +3,7 @@
 #include "ops_basic.h"
 #include "tests.h"
 
-// #define DEBUG
+#define DEBUG
 
 #ifdef DEBUG
   void print_vec(const ArrayDesc *desc, const void *v) {
@@ -38,30 +38,36 @@ bool count_sum(const size_t *index, uint64_t value, void *arg) {
   return false;
 }
 
+#define TEST_FUNCTIONS false
+
 int main() {
-  /*ArrayDesc *desc = alloc_desc(7, 1, 64);
-  void *data = alloc_array(desc);
+  if (TEST_FUNCTIONS) {
+    ArrayDesc *desc = alloc_desc(7, 1, 64);
+    void *data = alloc_array(desc);
 
-  bulk_set(desc, data, NULL, NULL, init_data, NULL);
+    bulk_set(desc, data, NULL, NULL, init_data, NULL);
 
-  uint64_t find_value = 42;
-  size_t *index = bulk_find(desc, data, NULL, NULL, bulk_find_value, &find_value);
-  printf("Found index: %zu\n", index[0]);
+    print_vec(desc, data);
 
-  uint64_t num_odd = 0;
-  bulk_find(desc, data, NULL, NULL, count_odd, &num_odd);
-  printf("Number of odd elements: %zu\n", num_odd);
+    uint64_t find_value = 42;
+    size_t *index = bulk_find(desc, data, NULL, NULL, bulk_find_value, &find_value);
+    printf("Found index: %zu\n", index[0]);
 
-  uint64_t sum = 0;
-  bulk_find(desc, data, NULL, NULL, count_sum, &sum);
-  printf("Sum of list: %zu\n", sum);*/
+    uint64_t num_odd = 0;
+    bulk_find(desc, data, NULL, NULL, count_odd, &num_odd);
+    printf("Number of odd elements: %zu\n", num_odd);
 
-  test_vec();
-  printf("\n");
-  test_mat();
-  printf("\n");
-  test_tsr();
-  printf("\n");
+    uint64_t sum = 0;
+    bulk_find(desc, data, NULL, NULL, count_sum, &sum);
+    printf("Sum of list: %zu\n", sum);
+  } else {
+    test_vec();
+    printf("\n");
+    test_mat();
+    printf("\n");
+    test_tsr();
+    printf("\n");
+  }
 
   return 0;
 }

@@ -67,6 +67,12 @@ void *alloc_array(ArrayDesc *desc) {
   return malloc((desc->num_bits * desc->size + 63) >> 6 << 3); // Make sure it's padded to 8 bytes
 }
 
+void free_desc(ArrayDesc *desc) {
+  free(desc->sizes);
+  free(desc->bulk_op_offset);
+  free(desc);
+}
+
 uint64_t desc_mask(const ArrayDesc *desc) {
   return desc->mask;
 }

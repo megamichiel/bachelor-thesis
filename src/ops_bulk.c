@@ -82,16 +82,19 @@ void bulk_set(const ArrayDesc *desc, void *data, const size_t *offset, const siz
   if (count == NULL)
     count = desc->sizes;
 
-  uint8_t bits = desc->num_bits;
+  uint8_t bits = desc->num_bits, highest_bit;
   uint64_t mask = desc->mask;
   size_t hi_dim = desc->dim - 1,
        row_bits = count[hi_dim] * bits, rem_bits;
+
+  if (row_bits == 0)
+    return;
 
   size_t *rel_offset = desc->bulk_op_offset;
   memset(rel_offset, 0, (hi_dim + 1) * sizeof(size_t));
 
   size_t iz;
-  uint64_t *row_data, vz;
+  uint64_t *row_data, vz, generated;
   int val_offset;
 
   size_t cur_dim;
@@ -103,8 +106,33 @@ void bulk_set(const ArrayDesc *desc, void *data, const size_t *offset, const siz
     row_data = (uint64_t *) data + (iz >> 6);
     iz &= 63, val_offset = (int) iz;
     rem_bits = row_bits;
+    vz = 0;
 
-    // Align to full array indices
+    while (true) {
+      highest_bit = iz + rem_bits < 64 ? iz + rem_bits : 64;
+
+      for (; val_offset < highest_bit; val_offset += bits) {
+        vz |= (generated = action(rel_offset, arg) & mask) << val_offset;
+        ++rel_offset[hi_dim];
+      }
+
+      if (iz && iz + rem_bits >= 64) {
+        *row_data = *row_data & ~(UINT64_MAX << iz) | vz & UINT64_MAX << iz;
+        rem_bits -= 64 - iz;
+        iz = 0;
+      } else if (rem_bits < 64) {
+        *row_data = *row_data & ~(~(UINT64_MAX << rem_bits) << iz) | vz & ~(UINT64_MAX << rem_bits) << iz;
+        break;
+      } else {
+        *row_data = vz;
+        rem_bits -= 64;
+      }
+      ++row_data;
+
+      vz = (val_offset -= highest_bit) > 0 ? generated >> -(val_offset - bits) : 0;
+    }
+
+    /*// Align to full array indices
     if (iz && iz + rem_bits >= 64) {
       vz = gen_values(rel_offset, hi_dim, bits, mask, &val_offset, 64, action, arg);
       *row_data = *row_data & ~(UINT64_MAX << iz) | vz & UINT64_MAX << iz;
@@ -117,7 +145,7 @@ void bulk_set(const ArrayDesc *desc, void *data, const size_t *offset, const siz
 
     // Set the last index
     vz = gen_values(rel_offset, hi_dim, bits, mask, &val_offset, iz + rem_bits, action, arg);
-    *row_data = *row_data & ~(~(UINT64_MAX << rem_bits) << iz) | vz & ~(UINT64_MAX << rem_bits) << iz;
+    *row_data = *row_data & ~(~(UINT64_MAX << rem_bits) << iz) | vz & ~(UINT64_MAX << rem_bits) << iz;*/
 
     for (cur_dim = hi_dim - 1; cur_dim != SIZE_MAX && ++rel_offset[cur_dim] == count[cur_dim]; --cur_dim)
       rel_offset[cur_dim] = 0;

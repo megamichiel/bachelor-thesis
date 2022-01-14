@@ -15,7 +15,7 @@ void test_mat_init_c() {
   ArrayDesc *desc = alloc_desc(ACTIVE_TEST_BITS, 2, MAT_SIZE, MAT_SIZE);
   void *data = alloc_array(desc);
 
-  free(desc);
+  free_desc(desc);
   free(data);
 }
 
@@ -56,6 +56,8 @@ void test_mat_get() {
 
   perform_benchmark("test_mat_get_n", WARMUP_COUNT, BENCH_COUNT, test_mat_get_n, args_n);
 
+  free(data_n);
+  
   ArrayDesc *desc = alloc_desc(ACTIVE_TEST_BITS, 2, MAT_SIZE, MAT_SIZE);
   void *data_c = alloc_array(desc);
   size_t count_c = MAT_SIZE;
@@ -65,6 +67,9 @@ void test_mat_get() {
   void *args_c[] = { desc, data_c };
 
   perform_benchmark("test_mat_get_c", WARMUP_COUNT, BENCH_COUNT, test_mat_get_c, args_c);
+
+  free_desc(desc);
+  free(data_c);
 }
 
 void test_mat_set_n(void **args) {
@@ -106,6 +111,10 @@ void test_mat_set() {
   void *args_c[] = { desc, data_c };
 
   perform_benchmark("test_mat_set_c", WARMUP_COUNT, BENCH_COUNT, test_mat_set_c, args_c);
+
+  free(data_n);
+  free_desc(desc);
+  free(data_c);
 }
 
 void test_mat_fill_n(void **args) {
@@ -145,6 +154,10 @@ void test_mat_fill() {
   void *args_c[] = { desc, data_c, &count_c };
 
   perform_benchmark("test_mat_fill_c", WARMUP_COUNT, BENCH_COUNT, test_mat_fill_c, args_c);
+
+  free(data_n);
+  free_desc(desc);
+  free(data_c);
 }
 
 void test_mat_bulk_set_n(void **args) {
@@ -186,6 +199,10 @@ void test_mat_bulk_set() {
   void *args_c[] = { desc, data_c, &count_c };
 
   perform_benchmark("test_mat_bulk_set_c", WARMUP_COUNT, BENCH_COUNT, test_mat_bulk_set_c, args_c);
+
+  free(data_n);
+  free_desc(desc);
+  free(data_c);
 }
 
 void test_mat_and_n(void **args) {
@@ -249,11 +266,17 @@ void test_mat_and() {
   void *args_c[] = { desc, x_c, y_c, z_c, &count_c };
 
   perform_benchmark("test_mat_and_c", WARMUP_COUNT, BENCH_COUNT, test_mat_and_c, args_c);
+
+  free_desc(desc);
+  free(x_c);
+  free(y_c);
+  free(z_c);
 }
 
 void test_mat() {
   test_mat_init();
   test_mat_get();
+  printf("Woah\n");
   test_mat_set();
   test_mat_fill();
   test_mat_bulk_set();
