@@ -11,6 +11,7 @@
       printf("%i\t", array_get32(desc, v, x));
     printf("\n");
   }
+
   void print_mat(const ArrayDesc *desc, const void *m) {
     for (size_t x = 0; x < dim_size(desc, 0); ++x) {
       for (size_t y = 0; y < dim_size(desc, 1); ++y)
@@ -41,7 +42,7 @@ bool count_sum(const size_t *index, uint64_t value, void *arg) {
 #define TEST_FUNCTIONS false
 
 int main() {
-  if (TEST_FUNCTIONS) {
+  #if TEST_FUNCTIONS
     ArrayDesc *desc = alloc_desc(7, 1, 64);
     void *data = alloc_array(desc);
 
@@ -60,14 +61,14 @@ int main() {
     uint64_t sum = 0;
     bulk_find(desc, data, NULL, NULL, count_sum, &sum);
     printf("Sum of list: %zu\n", sum);
-  } else {
+  #else
     test_vec();
     printf("\n");
     test_mat();
     printf("\n");
     test_tsr();
     printf("\n");
-  }
+  #endif
 
   return 0;
 }

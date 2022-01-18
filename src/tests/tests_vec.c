@@ -182,7 +182,7 @@ void test_vec_bulk_set() {
 
   perform_benchmark("test_vec_bulk_set_n", WARMUP_COUNT, BENCH_COUNT, test_vec_bulk_set_n, args_n);
 
-  ArrayDesc *desc = alloc_desc(BOOL_BITS, 1, VEC_SIZE);
+  ArrayDesc *desc = alloc_desc(ACTIVE_TEST_BITS, 1, VEC_SIZE);
   void *data_c = alloc_array(desc);
   size_t count_c = byte_size(desc);
 

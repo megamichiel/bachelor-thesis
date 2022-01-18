@@ -276,7 +276,6 @@ void test_mat_and() {
 void test_mat() {
   test_mat_init();
   test_mat_get();
-  printf("Woah\n");
   test_mat_set();
   test_mat_fill();
   test_mat_bulk_set();

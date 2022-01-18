@@ -4,9 +4,7 @@
 #include "types.h"
 
 ArrayDesc *alloc_desc(uint8_t num_bits, size_t dim, ...);
-
 void *alloc_array(ArrayDesc *desc);
-
 void free_desc(ArrayDesc *desc);
 
 #define static_alloc_desc(name, num_bits, dim, ...) static ArrayDesc *name = NULL; if (name == NULL) name = alloc_desc(num_bits, dim, __VA_ARGS__)
