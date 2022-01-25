@@ -2,8 +2,8 @@
 #ifndef THESIS_TESTS_H
 #define THESIS_TESTS_H
 
-#define WARMUP_COUNT 10000
-#define BENCH_COUNT 100000
+#define WARMUP_COUNT 1000
+#define BENCH_COUNT 10000
 
 #define RAND_SEED 1372485901 // Just some random value, to always use identical values in benchmarks
 
@@ -18,11 +18,11 @@
 #define TRIAD_BITS 25
 #define LARGE_BITS 40
 
-#define ACTIVE_TEST_BITS LARGE_BITS
-#define ACTIVE_TEST_TYPE uint64_t
-#define ACTIVE_TEST_TYPE_MAX ~(UINT64_MAX << ACTIVE_TEST_BITS)
-#define ACTIVE_TEST_GET array_get64
-#define ACTIVE_TEST_SET array_set64
+#define ACTIVE_TEST_BITS BOOL_BITS
+#define ACTIVE_TEST_TYPE bool
+#define ACTIVE_TEST_TYPE_MAX 1
+#define ACTIVE_TEST_GET array_get8
+#define ACTIVE_TEST_SET array_set8
 
 // TODO investigate why test_vec_set_n is much faster on this test than bool (around 4 times faster than bool, although I would expect identical performance)
 // I imagine that I made a mistake somewhere in the code, but I couldn't find it as of yet
