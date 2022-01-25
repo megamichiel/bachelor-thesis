@@ -39,7 +39,7 @@ bool count_sum(const size_t *index, uint64_t value, void *arg) {
   return false;
 }
 
-#define TEST_FUNCTIONS true
+#define TEST_FUNCTIONS false
 
 int main() {
   #if TEST_FUNCTIONS

@@ -66,6 +66,13 @@ void bulk_fill(const ArrayDesc *desc, void *data, const size_t *offset, const si
   } \
   bit -= highest_bit
 
+#define gen_values_fast(index, hi_dim, bits_per_val, mask, bit, highest_bit, action, arg, v) \
+  for (v = 0; bit < highest_bit; bit += bits_per_val) { \
+    v |= (action(index, arg) & mask) << bit; \
+    ++rel_offset[hi_dim]; \
+  } \
+  bit -= highest_bit
+
 void bulk_set(const ArrayDesc *desc, void *data, const size_t *offset, const size_t *count, uint64_t (*action)(const size_t *, void *), void *arg) {
   if (count == NULL)
     count = desc->sizes;
@@ -87,6 +94,8 @@ void bulk_set(const ArrayDesc *desc, void *data, const size_t *offset, const siz
 
   size_t cur_dim;
 
+  bool fast = 64 % bits == 0;
+
   // Update row by row
   do {
     rel_offset[hi_dim] = 0;
@@ -103,10 +112,16 @@ void bulk_set(const ArrayDesc *desc, void *data, const size_t *offset, const siz
     }
 
     // Set each index
-    for (; rem_bits >= 64; rem_bits -= 64) { // assert(bz == 0)
-      gen_values(rel_offset, hi_dim, bits, mask, val_offset, generated, 64, action, arg, vz);
-      *row_data++ = vz;
-    }
+    if (fast)
+      for (; rem_bits >= 64; rem_bits -= 64) { // assert(bz == 0)
+        gen_values_fast(rel_offset, hi_dim, bits, mask, val_offset, 64, action, arg, vz);
+        *row_data++ = vz;
+      }
+    else
+      for (; rem_bits >= 64; rem_bits -= 64) { // assert(bz == 0)
+        gen_values(rel_offset, hi_dim, bits, mask, val_offset, generated, 64, action, arg, vz);
+        *row_data++ = vz;
+      }
 
     // Set the last index
     gen_values(rel_offset, hi_dim, bits, mask, val_offset, generated, iz + rem_bits, action, arg, vz);
@@ -200,26 +215,24 @@ void bulk_op(
           *data_z++ = action(vx, vy, &carry, base_mask, arg);
         }
       }
+    } else if (ix || iy) {
+      for (; rem_bits >= 64; rem_bits -= 64) { // assert(iz == 0)
+        vx = nx >> ix, nx = *data_x++;
+        vy = ny >> iy, ny = *data_y++;
+
+        if (ix) vx |= nx << (64 - ix);
+        if (iy) vy |= ny << (64 - iy);
+
+        next_mask(bits, highest_index, shift, val_offset, base_mask, vz);
+        *data_z++ = action(vx, vy, &carry, vz, arg);
+      }
     } else {
-      if (ix || iy) {
-        for (; rem_bits >= 64; rem_bits -= 64) { // assert(iz == 0)
-          vx = nx >> ix, nx = *data_x++;
-          vy = ny >> iy, ny = *data_y++;
+      for (; rem_bits >= 64; rem_bits -= 64) { // assert(iz == 0)
+        vx = nx, nx = *data_x++;
+        vy = ny, ny = *data_y++;
 
-          if (ix) vx |= nx << (64 - ix);
-          if (iy) vy |= ny << (64 - iy);
-
-          next_mask(bits, highest_index, shift, val_offset, base_mask, vz);
-          *data_z++ = action(vx, vy, &carry, vz, arg);
-        }
-      } else {
-        for (; rem_bits >= 64; rem_bits -= 64) { // assert(iz == 0)
-          vx = nx, nx = *data_x++;
-          vy = ny, ny = *data_y++;
-
-          next_mask(bits, highest_index, shift, val_offset, base_mask, vz);
-          *data_z++ = action(vx, vy, &carry, vz, arg);
-        }
+        next_mask(bits, highest_index, shift, val_offset, base_mask, vz);
+        *data_z++ = action(vx, vy, &carry, vz, arg);
       }
     }
 
