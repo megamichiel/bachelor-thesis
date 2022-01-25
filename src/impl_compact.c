@@ -163,19 +163,15 @@ size_t bit_index_offset(const ArrayDesc *desc, const size_t *index, const size_t
   return out & desc->mask;\
 }
 
-#define array_set(name, type, bits) type name(const ArrayDesc *desc, void *data, size_t index, type val) {\
+#define array_set(name, type, bits) void name(const ArrayDesc *desc, void *data, size_t index, type val) {\
   type *data_ = (type *) (data + ((index *= desc->num_bits) >> 3));\
   index &= 7;\
   val &= desc->mask;\
-  \
-  data_[0] = data_[0] & ~(desc->mask << index) | (val << index);\
-  \
+  data_[0] = data_[0] & ~(desc->mask << index) | val << index;\
   if (index + desc->num_bits > bits) {\
     index = bits - index;\
     data_[1] = data_[1] & ~(desc->mask >> index) | val >> index;\
   }\
-  \
-  return val;\
 }
 
 array_get(array_get8, uint8_t, 8)

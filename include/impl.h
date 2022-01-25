@@ -28,9 +28,9 @@ uint64_t array_get64(const ArrayDesc *desc, const void *data, size_t index);
 
 // TODO add signed versions for get operations, because those need sign extension. Setting doesn't need a different version
 
-uint8_t array_set8(const ArrayDesc *desc, void *data, size_t index, uint8_t val);
-uint16_t array_set16(const ArrayDesc *desc, void *data, size_t index, uint16_t val);
-uint32_t array_set32(const ArrayDesc *desc, void *data, size_t index, uint32_t val);
-uint64_t array_set64(const ArrayDesc *desc, void *data, size_t index, uint64_t val);
+void array_set8(const ArrayDesc *desc, void *data, size_t index, uint8_t val);
+void array_set16(const ArrayDesc *desc, void *data, size_t index, uint16_t val);
+void array_set32(const ArrayDesc *desc, void *data, size_t index, uint32_t val);
+void array_set64(const ArrayDesc *desc, void *data, size_t index, uint64_t val);
 
 #endif

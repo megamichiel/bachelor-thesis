@@ -70,15 +70,19 @@ void test_vec_get() {
 
 void test_vec_set_n(void **args) {
   ACTIVE_TEST_TYPE *data = args[0];
+  size_t count = *(size_t *) args[1];
 
-  data[5] = 1;
+  for (int i = 0; i < count; ++i)
+    data[i] = i & ACTIVE_TEST_TYPE_MAX;
 }
 
 void test_vec_set_c(void **args) {
   ArrayDesc *desc = args[0];
   void *data = args[1];
+  size_t count = *(size_t *) args[2];
 
-  ACTIVE_TEST_SET(desc, data, 5, 1);
+  for (int i = 0; i < count; ++i)
+    ACTIVE_TEST_SET(desc, data, i, i);
 }
 
 uint64_t test_vec_set_c_init(const size_t *index, void *arg) {
@@ -90,9 +94,9 @@ void test_vec_set() {
   size_t count_n = VEC_SIZE;
 
   for (size_t x = 0; x < count_n; ++x)
-    data_n[x] = x;
+    data_n[x] = x & ACTIVE_TEST_TYPE_MAX;
 
-  void *args_n[] = { data_n };
+  void *args_n[] = { data_n, &count_n };
 
   perform_benchmark("test_vec_set_n", WARMUP_COUNT, BENCH_COUNT, test_vec_set_n, args_n);
 
@@ -101,7 +105,7 @@ void test_vec_set() {
 
   bulk_set(desc, data_c, NULL, NULL, test_vec_set_c_init, NULL);
 
-  void *args_c[] = { desc, data_c };
+  void *args_c[] = { desc, data_c, &count_n };
 
   perform_benchmark("test_vec_set_c", WARMUP_COUNT, BENCH_COUNT, test_vec_set_c, args_c);
 
@@ -258,9 +262,9 @@ void test_vec_and() {
 }
 
 void test_vec() {
-  // test_vec_init();
-  // test_vec_get();
-  // test_vec_set();
+  test_vec_init();
+  test_vec_get();
+  test_vec_set();
   test_vec_fill();
   test_vec_bulk_set();
   test_vec_and();

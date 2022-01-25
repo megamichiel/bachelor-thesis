@@ -39,7 +39,7 @@ bool count_sum(const size_t *index, uint64_t value, void *arg) {
   return false;
 }
 
-#define TEST_FUNCTIONS false
+#define TEST_FUNCTIONS true
 
 int main() {
   #if TEST_FUNCTIONS
@@ -47,12 +47,13 @@ int main() {
     void *data = alloc_array(desc);
 
     bulk_set(desc, data, NULL, NULL, init_data, NULL);
+    // bulk_fill(desc, data, NULL, NULL, 24);
 
     print_vec(desc, data);
 
     uint64_t find_value = 42;
     size_t *index = bulk_find(desc, data, NULL, NULL, bulk_find_value, &find_value);
-    printf("Found index: %zu\n", index[0]);
+    printf("Found index: %zu\n", index == NULL ? -1 : index[0]);
 
     uint64_t num_odd = 0;
     bulk_find(desc, data, NULL, NULL, count_odd, &num_odd);
