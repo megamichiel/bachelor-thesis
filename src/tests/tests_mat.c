@@ -13,7 +13,7 @@ void test_mat_init_n() {
 
 void test_mat_init_c() {
   ArrayDesc *desc = alloc_desc(ACTIVE_TEST_BITS, 2, MAT_SIZE, MAT_SIZE);
-  void *data = alloc_array(desc);
+  void *data = malloc_array(desc);
 
   free_desc(desc);
   free(data);
@@ -59,7 +59,7 @@ void test_mat_get() {
   free(data_n);
   
   ArrayDesc *desc = alloc_desc(ACTIVE_TEST_BITS, 2, MAT_SIZE, MAT_SIZE);
-  void *data_c = alloc_array(desc);
+  void *data_c = malloc_array(desc);
   size_t count_c = MAT_SIZE;
 
   bulk_set(desc, data_c, NULL, NULL, test_mat_get_c_init, &count_c);
@@ -103,7 +103,7 @@ void test_mat_set() {
   perform_benchmark("test_mat_set_n", WARMUP_COUNT, BENCH_COUNT, test_mat_set_n, args_n);
 
   ArrayDesc *desc = alloc_desc(ACTIVE_TEST_BITS, 2, MAT_SIZE, MAT_SIZE);
-  void *data_c = alloc_array(desc);
+  void *data_c = malloc_array(desc);
   size_t count_c = MAT_SIZE;
 
   bulk_set(desc, data_c, NULL, NULL, test_mat_set_c_init, &count_c);
@@ -148,7 +148,7 @@ void test_mat_fill() {
   perform_benchmark("test_mat_fill_n", WARMUP_COUNT, BENCH_COUNT, test_mat_fill_n, args_n);
 
   ArrayDesc *desc = alloc_desc(ACTIVE_TEST_BITS, 2, MAT_SIZE, MAT_SIZE);
-  void *data_c = alloc_array(desc);
+  void *data_c = malloc_array(desc);
   size_t count_c = byte_size(desc);
 
   void *args_c[] = { desc, data_c, &count_c };
@@ -193,7 +193,7 @@ void test_mat_bulk_set() {
   perform_benchmark("test_mat_bulk_set_n", WARMUP_COUNT, BENCH_COUNT, test_mat_bulk_set_n, args_n);
 
   ArrayDesc *desc = alloc_desc(ACTIVE_TEST_BITS, 2, MAT_SIZE, MAT_SIZE);
-  void *data_c = alloc_array(desc);
+  void *data_c = malloc_array(desc);
   size_t count_c = byte_size(desc);
 
   void *args_c[] = { desc, data_c, &count_c };
@@ -251,7 +251,7 @@ void test_mat_and() {
   free(z_n);
 
   ArrayDesc *desc = alloc_desc(ACTIVE_TEST_BITS, 2, MAT_SIZE, MAT_SIZE);
-  void *x_c = alloc_array(desc), *y_c = alloc_array(desc), *z_c = alloc_array(desc);
+  void *x_c = malloc_array(desc), *y_c = malloc_array(desc), *z_c = malloc_array(desc);
   size_t count_c = byte_size(desc);
 
   srandom(RAND_SEED);

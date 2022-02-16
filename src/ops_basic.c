@@ -3,13 +3,13 @@
 
 uint64_t bulk_add(uint64_t x, uint64_t y, uint64_t *carry, uint64_t mask, void *arg) {
   uint64_t z = (x + y + *carry) & mask;
-  *carry = x > UINT64_MAX - y || (*carry == 1 && x + y == UINT64_MAX) ? 1 : 0;
+  *carry = (*carry == 1 ? (x >= UINT64_MAX - y) : (x > UINT64_MAX - y)) ? 1 : 0;
   return z;
 }
 
 uint64_t bulk_sub(uint64_t x, uint64_t y, uint64_t *carry, uint64_t mask, void *arg) {
   uint64_t z = ((x | ~mask) - y - *carry) & mask;
-  *carry = x < y || (*carry == 1 && x == y) ? 1 : 0;
+  *carry = (*carry == 1 ? (x <= y) : (x < y)) ? 1 : 0;
   return z;
 }
 

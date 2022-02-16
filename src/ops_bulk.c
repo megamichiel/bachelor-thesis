@@ -254,6 +254,23 @@ void bulk_op(
   }
 }
 
+#define find_step(index, hi_dim, bits_per_val, mask, bit, highest_bit, action, arg, d, val) {\
+  val = *(d++);\
+  while (bit + bits_per_val <= highest_bit) {\
+    if (action(index, (val >> bit) & mask, arg))\
+      return index;\
+    index[hi_dim]++;\
+    bit += bits_per_val;\
+  }\
+  if (bit < highest_bit) {\
+    if (action(index, (val >> bit | *d << (highest_bit - bit)) & mask, arg))\
+      return index;\
+    index[hi_dim]++;\
+    bit += bits_per_val;\
+  }\
+  bit -= highest_bit;\
+}
+
 size_t *bulk_find(
         const ArrayDesc *desc, void *data, const size_t *offset, const size_t *count,
         bool (*action)(const size_t *, uint64_t, void *), void *arg
@@ -262,45 +279,40 @@ size_t *bulk_find(
     count = desc->sizes;
 
   uint8_t bits = desc->num_bits;
-  size_t dim = desc->dim, row_bits = count[dim - 1] * bits, rem_bits;
+  size_t hi_dim = desc->dim - 1, row_bits = count[hi_dim] * bits, rem_bits;
 
   size_t *rel_offset = desc->bulk_op_offset;
-  memset(rel_offset, 0, dim * sizeof(size_t));
+  memset(rel_offset, 0, desc->dim * sizeof(size_t));
 
   uint64_t *data64, vz;
   size_t iz;
-  int val_offset;
+  uint8_t val_offset;
 
   size_t cur_dim;
 
   // Update row by row
   do {
-    rel_offset[dim - 1] = 0;
+    rel_offset[hi_dim] = 0;
     iz = bit_index_offset(desc, rel_offset, offset);
     data64 = (uint64_t *) data + (iz >> 6);
-    val_offset = (int) (iz &= 63);
+    val_offset = iz & 63;
     rem_bits = row_bits;
 
-    while (rem_bits > 0) {
-      uint8_t highest_bit = iz + rem_bits < 64 ? iz + rem_bits : 64;
+    if (val_offset + rem_bits >= 64) {
+      rem_bits -= 64 - val_offset;
+      find_step(rel_offset, hi_dim, bits, desc->mask, val_offset, 64, action, arg, data64, vz)
 
-      for (vz = *data64++; val_offset < highest_bit; val_offset += bits) {
-        // Is the number spread across multiple bytes?
-        if (val_offset + bits > 64) {
-          if (action(rel_offset, vz >> val_offset | *data64 << (highest_bit - val_offset) & ~(UINT64_MAX << bits), arg))
-            return rel_offset;
-        } else if (action(rel_offset, vz >> val_offset & ~(UINT64_MAX << bits), arg))
-          return rel_offset;
+      while (rem_bits >= 64) {
+        find_step(rel_offset, hi_dim, bits, desc->mask, val_offset, 64, action, arg, data64, vz)
 
-        ++rel_offset[dim - 1];
+        rem_bits -= 64;
       }
-      val_offset -= highest_bit;
-
-      rem_bits -= highest_bit - iz;
-      iz = 0;
     }
 
-    for (cur_dim = dim - 2; cur_dim != SIZE_MAX && ++rel_offset[cur_dim] == count[cur_dim]; --cur_dim)
+    if (rem_bits > 0)
+      find_step(rel_offset, hi_dim, bits, desc->mask, val_offset, rem_bits, action, arg, data64, vz)
+
+    for (cur_dim = hi_dim - 1; cur_dim != SIZE_MAX && ++rel_offset[cur_dim] == count[cur_dim]; --cur_dim)
       rel_offset[cur_dim] = 0;
   } while (cur_dim != SIZE_MAX);
 

@@ -39,12 +39,12 @@ bool count_sum(const size_t *index, uint64_t value, void *arg) {
   return false;
 }
 
-#define TEST_FUNCTIONS false
+#define TEST_FUNCTIONS true
 
 int main() {
   #if TEST_FUNCTIONS
     ArrayDesc *desc = alloc_desc(7, 1, 64);
-    void *data = alloc_array(desc);
+    void *data = malloc_array(desc);
 
     bulk_set(desc, data, NULL, NULL, init_data, NULL);
     // bulk_fill(desc, data, NULL, NULL, 24);

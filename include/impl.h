@@ -4,11 +4,16 @@
 #include "types.h"
 
 ArrayDesc *alloc_desc(uint8_t num_bits, size_t dim, ...);
-void *alloc_array(ArrayDesc *desc);
+ArrayDesc *add_redundancy(ArrayDesc *desc, uint8_t redundant_bits);
+
+#define alloc_desc_redundant(num_bits, redundant_bits, dim, ...) add_redundancy(alloc_desc(num_bits, dim, __VA_ARGS__), redundant_bits)
+
+void *malloc_array(const ArrayDesc *desc);
+void *calloc_array(const ArrayDesc *desc);
 void free_desc(ArrayDesc *desc);
 
 #define static_alloc_desc(name, num_bits, dim, ...) static ArrayDesc *name = NULL; if (name == NULL) name = alloc_desc(num_bits, dim, __VA_ARGS__)
-#define static_alloc_array(name, desc) static void *name = NULL; if (name == NULL) name = alloc_array(desc)
+#define static_malloc_array(name, desc) static void *name = NULL; if (name == NULL) name = malloc_array(desc)
 
 uint64_t desc_mask(const ArrayDesc *desc);
 size_t bit_count(const ArrayDesc *desc);

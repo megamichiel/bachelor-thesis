@@ -46,13 +46,7 @@ ArrayDesc *alloc_desc(uint8_t num_bits, size_t dim, ...) {
 
   ArrayDesc *out = malloc(sizeof(ArrayDesc));
 
-  #if REDUNDANT_BITS == 0
-    out->num_bits = num_bits;
-  #elif REDUNDANT_BITS == 1
-    out->num_bits = num_bits == 1 ? 1 : num_bits + 1;
-  #elif REDUNDANT_BITS == 2
-    out->num_bits = num_bits == 1 ? 1 : num_bits >= 32 ? 64 : (num_bits << 1);
-  #endif
+  out->num_bits = num_bits;
   out->dim = dim;
   out->sizes = sizes;
   out->size = size;
@@ -63,8 +57,18 @@ ArrayDesc *alloc_desc(uint8_t num_bits, size_t dim, ...) {
   return out;
 }
 
-void *alloc_array(ArrayDesc *desc) {
+ArrayDesc *add_redundancy(ArrayDesc *desc, uint8_t redundant_bits) {
+  desc->num_bits += redundant_bits;
+
+  return desc;
+}
+
+void *malloc_array(const ArrayDesc *desc) {
   return malloc((desc->num_bits * desc->size + 63) >> 6 << 3); // Make sure it's padded to 8 bytes
+}
+
+void *calloc_array(const ArrayDesc *desc) {
+  return calloc((desc->num_bits * desc->size + 63) >> 6 << 3, 1); // Make sure it's padded to 8 bytes
 }
 
 void free_desc(ArrayDesc *desc) {
@@ -152,6 +156,8 @@ size_t bit_index_offset(const ArrayDesc *desc, const size_t *index, const size_t
   return out * pad_row(desc->sizes[max_d] * desc->num_bits) + (index[max_d] + (offset == NULL ? 0 : offset[max_d])) * desc->num_bits;
 }
 
+// TODO don't shift >> 3, because then you will get addresses that aren't a multiple of the number used
+// This works fine on my pc, but this behaviour isn't guaranteed, so it should be fixed
 #define array_get(name, type, bits) type name(const ArrayDesc *desc, const void *data, size_t index) {\
   type *data_ = (type *) (data + ((index *= desc->num_bits) >> 3));\
   index &= 7;\
@@ -163,6 +169,7 @@ size_t bit_index_offset(const ArrayDesc *desc, const size_t *index, const size_t
   return out & desc->mask;\
 }
 
+// TODO do the same here as in array_get
 #define array_set(name, type, bits) void name(const ArrayDesc *desc, void *data, size_t index, type val) {\
   type *data_ = (type *) (data + ((index *= desc->num_bits) >> 3));\
   index &= 7;\

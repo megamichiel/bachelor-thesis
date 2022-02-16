@@ -49,7 +49,7 @@ ArrayDesc *alloc_desc(uint8_t num_bits, size_t dim, ...) {
   return out;
 }
 
-void *alloc_array(ArrayDesc *desc) {
+void *malloc_array(ArrayDesc *desc) {
   return calloc(desc->num_bytes, desc->size);
 }
 
