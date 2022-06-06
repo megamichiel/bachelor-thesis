@@ -5,11 +5,16 @@
 #ifndef IMPL__COMPACT_C
 #define IMPL__COMPACT_C
 
+//#define BULK_USE_ARRAYS true
+
 struct ARRAY_DESC {
   uint8_t num_bits;
   size_t dim, *sizes, size;
   uint64_t mask;
 
+#if BULK_USE_ARRAYS
+  uint64_t *bulk_fill_buf;
+#endif
   size_t *bulk_op_offset;
 };
 
@@ -52,6 +57,9 @@ ArrayDesc *alloc_desc(uint8_t num_bits, size_t dim, ...) {
   out->size = size;
   out->mask = bit_mask(num_bits);
 
+#if BULK_USE_ARRAYS
+  out->bulk_fill_buf = calloc(64, sizeof(uint64_t));
+#endif
   out->bulk_op_offset = calloc(dim, sizeof(size_t));
 
   return out;
@@ -73,6 +81,9 @@ void *calloc_array(const ArrayDesc *desc) {
 
 void free_desc(ArrayDesc *desc) {
   free(desc->sizes);
+#if BULK_USE_ARRAYS
+  free(desc->bulk_fill_buf);
+#endif
   free(desc->bulk_op_offset);
   free(desc);
 }
@@ -156,11 +167,9 @@ size_t bit_index_offset(const ArrayDesc *desc, const size_t *index, const size_t
   return out * pad_row(desc->sizes[max_d] * desc->num_bits) + (index[max_d] + (offset == NULL ? 0 : offset[max_d])) * desc->num_bits;
 }
 
-// TODO don't shift >> 3, because then you will get addresses that aren't a multiple of the number used
-// This works fine on my pc, but this behaviour isn't guaranteed, so it should be fixed
-#define array_get(name, type, bits) type name(const ArrayDesc *desc, const void *data, size_t index) {\
-  type *data_ = (type *) (data + ((index *= desc->num_bits) >> 3));\
-  index &= 7;\
+#define define_array_get(name, type, bits, shift) type name(const ArrayDesc *desc, const void *data, size_t index) {\
+  type *data_ = ((type *) data) + ((index *= desc->num_bits) >> shift);\
+  index &= ((1 << shift) - 1);\
   \
   type out = data_[0] >> index;\
   if (index + desc->num_bits > bits)\
@@ -169,10 +178,9 @@ size_t bit_index_offset(const ArrayDesc *desc, const size_t *index, const size_t
   return out & desc->mask;\
 }
 
-// TODO do the same here as in array_get
-#define array_set(name, type, bits) void name(const ArrayDesc *desc, void *data, size_t index, type val) {\
-  type *data_ = (type *) (data + ((index *= desc->num_bits) >> 3));\
-  index &= 7;\
+#define define_array_set(name, type, bits, shift) void name(const ArrayDesc *desc, void *data, size_t index, type val) {\
+  type *data_ = ((type *) data) + ((index *= desc->num_bits) >> shift);\
+  index &= ((1 << shift) - 1);\
   val &= desc->mask;\
   data_[0] = data_[0] & ~(desc->mask << index) | val << index;\
   if (index + desc->num_bits > bits) {\
@@ -181,14 +189,14 @@ size_t bit_index_offset(const ArrayDesc *desc, const size_t *index, const size_t
   }\
 }
 
-array_get(array_get8, uint8_t, 8)
-array_get(array_get16, uint16_t, 16)
-array_get(array_get32, uint32_t, 32)
-array_get(array_get64, uint64_t, 64)
+define_array_get(array_get8, uint8_t, 8, 3)
+define_array_get(array_get16, uint16_t, 16, 4)
+define_array_get(array_get32, uint32_t, 32, 5)
+define_array_get(array_get64, uint64_t, 64, 6)
 
-array_set(array_set8, uint8_t, 8)
-array_set(array_set16, uint16_t, 16)
-array_set(array_set32, uint32_t, 32)
-array_set(array_set64, uint64_t, 64)
+define_array_set(array_set8, uint8_t, 8, 3)
+define_array_set(array_set16, uint16_t, 16, 4)
+define_array_set(array_set32, uint32_t, 32, 5)
+define_array_set(array_set64, uint64_t, 64, 6)
 
 #endif

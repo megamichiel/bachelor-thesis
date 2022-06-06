@@ -21,6 +21,6 @@ uint64_t bulk_xor(uint64_t x, uint64_t y, uint64_t *carry, uint64_t mask, void *
 
 uint64_t bulk_not(uint64_t x, uint64_t y, uint64_t *carry, uint64_t mask, void *arg);
 
-bool bulk_find_value(const size_t *index, uint64_t value, void *arg);
+bool scan_find_value(const size_t *index, uint64_t value, void *arg);
 
 #endif //THESIS_OPS_BASIC_H

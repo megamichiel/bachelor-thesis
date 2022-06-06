@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "ops.h"
 #include "ops_basic.h"
 #include "tests.h"
@@ -39,36 +40,81 @@ bool count_sum(const size_t *index, uint64_t value, void *arg) {
   return false;
 }
 
-#define TEST_FUNCTIONS true
+//#define TEST_FUNCTIONS true
 
-int main() {
+bool parse_args(int argc, char *argv[], int offset, size_t *out, int count, const char *usage) {
+  if (argc < offset + count) {
+    printf("Usage: %s %s %s\n", argv[0], argv[1], usage);
+    return false;
+  }
+
+  char *end;
+
+  for (int x = 0; x < count; ++x) {
+    out[x] = strtoll(argv[offset + x], &end, 10);
+    if (*end != 0) {
+      printf("Argument %i must be an integer!\n", offset + x);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+int main(int argc, char *argv[]) {
   #if TEST_FUNCTIONS
     ArrayDesc *desc = alloc_desc(7, 1, 64);
     void *data = malloc_array(desc);
 
     bulk_set(desc, data, NULL, NULL, init_data, NULL);
-    // bulk_fill(desc, data, NULL, NULL, 24);
+//     bulk_fill(desc, data, NULL, NULL, 24);
 
     print_vec(desc, data);
 
     uint64_t find_value = 42;
-    size_t *index = bulk_find(desc, data, NULL, NULL, bulk_find_value, &find_value);
-    printf("Found index: %zu\n", index == NULL ? -1 : index[0]);
+    size_t *index = bulk_scan(desc, data, NULL, NULL, scan_find_value, &find_value);
+    printf("Found value %i at %zu\n", index == NULL ? -1 : array_get64(desc, data, *index), index == NULL ? -1 : *index);
 
     uint64_t num_odd = 0;
-    bulk_find(desc, data, NULL, NULL, count_odd, &num_odd);
+    bulk_scan(desc, data, NULL, NULL, count_odd, &num_odd);
     printf("Number of odd elements: %zu\n", num_odd);
 
     uint64_t sum = 0;
-    bulk_find(desc, data, NULL, NULL, count_sum, &sum);
+    bulk_scan(desc, data, NULL, NULL, count_sum, &sum);
     printf("Sum of list: %zu\n", sum);
   #else
-    test_vec();
-    printf("\n");
-    test_mat();
-    printf("\n");
-    test_tsr();
-    printf("\n");
+    if (argc > 1) {
+      if (!strcmp(argv[1], "all")) {
+        size_t sizes[3];
+        if (!parse_args(argc, argv, 2, sizes, 3, "<vec size> <mat size> <tsr size>"))
+          return 1;
+
+        printf("Test,Normal,Custom\n");
+        test_vec(sizes[0]);
+        test_mat(sizes[1]);
+        test_tsr(sizes[2]);
+      } else if (!strcmp(argv[1], "vec")) {
+        size_t size;
+        if (!parse_args(argc, argv, 2, &size, 1, "<size>"))
+          return 1;
+
+        printf("Test,Normal,Custom\n");
+        test_vec(size);
+      } else if (!strcmp(argv[1], "bulk")) {
+        size_t size;
+        if (!parse_args(argc, argv, 2, &size, 1, "<size>"))
+          return 1;
+
+        printf("Test,Normal,Bulk,Manual\n");
+        test_vec_scan_triple(size);
+        test_vec_bulk_set_triple(size);
+      } else {
+        printf("Unknown command: %s\n", argv[1]);
+        return 1;
+      }
+    } else {
+      printf("Usage: %s (all|vec|bulk|window)\n", argv[0]);
+    }
   #endif
 
   return 0;

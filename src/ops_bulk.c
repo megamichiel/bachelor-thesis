@@ -4,9 +4,13 @@
 
 #define gen_mask(bits, mask, imask, hi, shift) for (hi = 0, imask = 0; hi < 64; hi += bits) imask |= mask << hi; shift = hi - 64; hi -= bits
 
-#define next_mask(bits, hi, shift, offset, imask, nmask) nmask = imask << offset | imask >> (hi - offset); if ((offset += shift) >= bits) offset -= bits
+#define BULK_FILL_ARRAY false
 
-void bulk_fill(const ArrayDesc *desc, void *data, const size_t *offset, const size_t *count, uint64_t val) {
+#define next_mask(bits, hi, shift, offset, imask, nmask) \
+  nmask = imask << offset | imask >> (hi - offset);\
+  if ((offset += shift) >= bits) offset -= bits
+
+void bulk_fill_default(const ArrayDesc *desc, void *data, const size_t *offset, const size_t *count, uint64_t val) {
   val &= desc->mask;
 
   uint64_t *row_data;
@@ -51,6 +55,85 @@ void bulk_fill(const ArrayDesc *desc, void *data, const size_t *offset, const si
 
     // Set the last index
     next_mask(bits, highest_index, shift, val_offset, base_mask, vz);
+    *row_data = *row_data & ~(~(UINT64_MAX << rem_bits) << bz) | (vz & ~(UINT64_MAX << rem_bits) << bz);
+
+    for (cur_dim = dim - 2; cur_dim != SIZE_MAX && ++rel_offset[cur_dim] == count[cur_dim]; --cur_dim)
+      rel_offset[cur_dim] = 0;
+  } while (cur_dim != SIZE_MAX);
+}
+
+#define next_mask_arr(bits, shift, offset, arr, nmask) \
+  nmask = arr[offset];\
+  if ((offset += shift) >= bits) offset -= bits
+
+// This version uses an array to store uint64 values
+void bulk_fill(const ArrayDesc *desc, void *data, const size_t *offset, const size_t *count, uint64_t val) {
+  val &= desc->mask;
+
+  uint64_t *row_data;
+
+  if (count == NULL)
+    count = desc->sizes;
+
+  uint8_t bits = desc->num_bits;
+  size_t dim = desc->dim, row_bits = count[dim - 1] * bits, rem_bits;
+
+  size_t *rel_offset = desc->bulk_op_offset;
+  memset(rel_offset, 0, dim * sizeof(size_t));
+
+  size_t cur_dim;
+
+  uint64_t base_mask, vz;
+  size_t iz;
+  uint8_t bz, highest_index, shift, val_offset = 0;
+  gen_mask(bits, val, base_mask, highest_index, shift);
+
+#if BULK_USE_ARRAYS
+  uint64_t *bulk_fill_buf = desc->bulk_fill_buf;
+  size_t start_offset = val_offset;
+
+  // Generate mask for each val_offset
+  do {
+    next_mask(bits, highest_index, shift, val_offset, base_mask, bulk_fill_buf[val_offset]);
+  } while (val_offset != start_offset);
+#endif
+
+  // Update row by row
+  do {
+    iz = bit_index_offset(desc, rel_offset, offset), bz = iz & 63, val_offset = bz;
+    row_data = (uint64_t *) data + (iz >> 6);
+    rem_bits = row_bits;
+
+    // Align to full array indices
+    if (bz && bz + rem_bits >= 64) {
+#if BULK_USE_ARRAYS
+      next_mask_arr(bits, shift, val_offset, bulk_fill_buf, vz);
+#else
+      next_mask(bits, highest_index, shift, val_offset, base_mask, vz);
+#endif
+      *row_data = *row_data & ~(UINT64_MAX << bz) | vz & UINT64_MAX << bz;
+      rem_bits -= 64 - bz, ++row_data, bz = 0;
+    }
+
+    // Set each index
+    if (shift == 0)
+      for (; rem_bits >= 64; rem_bits -= 64) // assert(bz == 0)
+        *row_data++ = base_mask;
+    else
+      for (; rem_bits >= 64; rem_bits -= 64) { // assert(bz == 0)
+#if BULK_USE_ARRAYS
+        next_mask_arr(bits, shift, val_offset, bulk_fill_buf, *row_data++);
+#else
+        next_mask(bits, highest_index, shift, val_offset, base_mask, *row_data++);
+#endif
+      }
+
+    // Set the last index
+#if BULK_USE_ARRAYS
+    next_mask_arr(bits, shift, val_offset, bulk_fill_buf, vz);
+#else
+    next_mask(bits, highest_index, shift, val_offset, base_mask, vz);
+#endif
     *row_data = *row_data & ~(~(UINT64_MAX << rem_bits) << bz) | (vz & ~(UINT64_MAX << rem_bits) << bz);
 
     for (cur_dim = dim - 2; cur_dim != SIZE_MAX && ++rel_offset[cur_dim] == count[cur_dim]; --cur_dim)
@@ -161,6 +244,16 @@ void bulk_op(
   uint8_t highest_index, shift;
   gen_mask(bits, dz->mask, base_mask, highest_index, shift);
 
+#if BULK_USE_ARRAYS
+  uint64_t *bulk_fill_buf = dz->bulk_fill_buf;
+  size_t start_offset = val_offset;
+
+  // Generate mask for each val_offset
+  do {
+    next_mask(bits, highest_index, shift, val_offset, base_mask, bulk_fill_buf[val_offset]);
+  } while (val_offset != start_offset);
+#endif
+
   while (cur_dim != SIZE_MAX) {
     // Array indices
     ix = bit_index_offset(dx, offset, ox);
@@ -188,7 +281,11 @@ void bulk_op(
       if ((iy += 64 - iz) >= 64 && (iy -= 64))
         vy |= ny << (64 - iy);
 
+#if BULK_USE_ARRAYS
+      next_mask_arr(bits, shift, val_offset, bulk_fill_buf, vz);
+#else
       next_mask(bits, highest_index, shift, val_offset, base_mask, vz);
+#endif
       vz = action(vx << iz, vy << iz, &carry, vz, arg);
 
       *data_z = *data_z & ~(UINT64_MAX << iz) | (vz & (UINT64_MAX << iz));
@@ -223,7 +320,11 @@ void bulk_op(
         if (ix) vx |= nx << (64 - ix);
         if (iy) vy |= ny << (64 - iy);
 
+#if BULK_USE_ARRAYS
+        next_mask_arr(bits, shift, val_offset, bulk_fill_buf, vz);
+#else
         next_mask(bits, highest_index, shift, val_offset, base_mask, vz);
+#endif
         *data_z++ = action(vx, vy, &carry, vz, arg);
       }
     } else {
@@ -231,7 +332,11 @@ void bulk_op(
         vx = nx, nx = *data_x++;
         vy = ny, ny = *data_y++;
 
+#if BULK_USE_ARRAYS
+        next_mask_arr(bits, shift, val_offset, bulk_fill_buf, vz);
+#else
         next_mask(bits, highest_index, shift, val_offset, base_mask, vz);
+#endif
         *data_z++ = action(vx, vy, &carry, vz, arg);
       }
     }
@@ -243,7 +348,11 @@ void bulk_op(
       if (ix + rem_bits >= 64) vx |= nx << (64 - ix);
       if (iy + rem_bits >= 64) vy |= ny << (64 - iy);
 
+#if BULK_USE_ARRAYS
+      next_mask_arr(bits, shift, val_offset, bulk_fill_buf, vz);
+#else
       next_mask(bits, highest_index, shift, val_offset, base_mask, vz);
+#endif
       vz = action(vx, vy, &carry, vz, arg);
 
       *data_z = *data_z & ~(~(UINT64_MAX << rem_bits) << iz) | (vz & ~(UINT64_MAX << rem_bits)) << iz;
@@ -271,7 +380,7 @@ void bulk_op(
   bit -= highest_bit;\
 }
 
-size_t *bulk_find(
+size_t *bulk_scan(
         const ArrayDesc *desc, void *data, const size_t *offset, const size_t *count,
         bool (*action)(const size_t *, uint64_t, void *), void *arg
 ) {

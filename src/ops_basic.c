@@ -29,6 +29,6 @@ uint64_t bulk_not(uint64_t x, uint64_t y, uint64_t *carry, uint64_t mask, void *
   return ~x;
 }
 
-bool bulk_find_value(const size_t *index, uint64_t value, void *arg) {
+bool scan_find_value(const size_t *index, uint64_t value, void *arg) {
   return value == *((uint64_t *) arg);
 }

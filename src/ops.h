@@ -19,7 +19,7 @@ void bulk_op(
         uint64_t (*action)(uint64_t x, uint64_t y, uint64_t *carry, uint64_t mask, void *arg), void *arg
 );
 
-size_t *bulk_find(
+size_t *bulk_scan(
         const ArrayDesc *desc, void *data, const size_t *offset, const size_t *count,
         bool (*action)(const size_t *index, uint64_t val, void *arg), void *arg
 );

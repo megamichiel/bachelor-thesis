@@ -5,9 +5,10 @@
 #include "tests.h"
 #include "ops_basic.h"
 
-void perform_benchmark(const char *name, int warmup, int iterations, void (*func)(void **), void **args) {
+void perform_benchmark(const char *name, int warmup, int iterations, bool newline, void (*func)(void **), void **args) {
   // First, warp up
-  printf("Benchmark %s (%i//%i): ", name, warmup, iterations);
+  if (!newline && name != NULL)
+    printf("%s,", name);
 
   while (--warmup >= 0)
     func(args);
@@ -18,5 +19,5 @@ void perform_benchmark(const char *name, int warmup, int iterations, void (*func
   while (--iterations >= 0)
     func(args);
 
-  printf("%fs\n", (float) clock() / CLOCKS_PER_SEC - start);
+  printf(newline ? "%f\n" : "%f,", (float) clock() / CLOCKS_PER_SEC - start);
 }
